@@ -94,7 +94,7 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              onPress={() => router.push("/(authenticated)/viewer")}
+              onPress={() => router.push("/(authenticated)/dashboard")}
               className="bg-[#c69c6d] w-full flex justfy-center items-center py-5 rounded-xl mt-10 mb-5"
             >
               <Text className="text-white text-2xl font-semibold">Login</Text>
