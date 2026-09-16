@@ -28,7 +28,7 @@ export default function OnboardingScreen() {
             Import your first shoot
           </Text>
 
-          <Text className="text-gray-300 text-center font-mono leading-6 text-xs px-2">
+          <Text className="text-gray-100 text-center font-mono leading-6 text-x px-2">
             Initialize your archive. Connect your primary drive and begin the
             cataloging sequence for your raw negatives.
           </Text>
