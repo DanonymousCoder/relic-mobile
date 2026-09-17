@@ -10,7 +10,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { getShoots, createShoot, uploadFiles } from "../../services/api";
+import {
+  getShoots,
+  createShoot,
+  uploadFiles,
+  triggerArchive,
+  logout,
+} from "../../services/api";
 import { useEffect, useState } from "react";
 import { Modal, TextInput } from "react-native";
 import * as ImagePicker from "expo-image-picker";
@@ -128,6 +134,8 @@ export default function DashboardScreen() {
 
       await uploadFiles(shoot.id, formData);
 
+      await triggerArchive(shoot.id);
+
       setModalVisible(false);
       setNewShootName("");
       loadShoots();
@@ -136,6 +144,16 @@ export default function DashboardScreen() {
       Alert.alert("Error", "Failed to upload archive.");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.replace("/");
+    } catch (error) {
+      console.error("Logout failed", error);
+      Alert.alert("Error", "Failed to logout");
     }
   };
 
@@ -268,7 +286,10 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity className="flex-1 items-center">
+        <TouchableOpacity
+          className="flex-1 items-center"
+          onPress={handleLogout}
+        >
           <Text className="text-gray-200 text-[18px] font-mono mt-2 tracking-widest uppercase">
             Settings
           </Text>
