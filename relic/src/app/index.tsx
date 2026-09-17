@@ -9,9 +9,11 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Host, Checkbox } from "@expo/ui";
+import { Host } from "@expo/ui";
 import { Link, router } from "expo-router";
 import { cssInterop } from "nativewind";
+import { Checkbox } from "expo-checkbox";
+import { login, RelicApiError } from "../services/api";
 
 export default function LoginScreen() {
   cssInterop(Link, { className: "style" });
@@ -20,6 +22,31 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setErrorMessage("Enter both your email and password");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    try {
+      await login(email, password);
+      router.replace("/(authenticated)/dashboard");
+    } catch (error) {
+      if (error instanceof RelicApiError) {
+        setErrorMessage(error.message);
+      } else {
+        setErrorMessage("Failed to connect to the Backend.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ImageBackground
@@ -82,29 +109,38 @@ export default function LoginScreen() {
             </View>
 
             <View className="flex-row items-center w-full justify-between">
-              {/**<Host matchContents>
-                <Checkbox 
-                  label='Remember me'
+              {/** Checkbox  */}
+              <TouchableOpacity className="flex-row gap-3">
+                <Checkbox
                   value={isChecked}
                   onValueChange={setIsChecked}
-                  className='h-10'
+                  color={isChecked ? "#C69C6D" : "#9CA3AF"}
                 />
-              </Host> */}
+                <Text className="text-gray-600 text-sm">Remember me</Text>
+              </TouchableOpacity>
               <Text className="text-gray-500">Forgot password?</Text>
             </View>
 
+            {/** Error Message */}
+            {errorMessage ? (
+              <Text className="text-red-500 w-full text-center mt-4 font-medium">
+                {errorMessage}
+              </Text>
+            ) : null}
             <TouchableOpacity
-              onPress={() => router.push("/(authenticated)/dashboard")}
-              className="bg-[#c69c6d] w-full flex justfy-center items-center py-5 rounded-xl mt-10 mb-5"
+              onPress={handleLogin}
+              className={`${loading ? "bg-[#c69c6d]/70" : "bg-[#c69c6d]"} w-full  mt-6 py-4 rounded-xl items-center mb-6`}
             >
-              <Text className="text-white text-2xl font-semibold">Login</Text>
+              <Text className="text-white text-2xl font-semibold">
+                {loading ? "Authenticating..." : "Login"}
+              </Text>
             </TouchableOpacity>
 
             <View>
               <Text>
                 Don't have an account?{" "}
                 <Text
-                  onPress={() => router.push("/onboarding")}
+                  onPress={() => router.push("/signup")}
                   className="text-[#c69c6d] font-semibold text-lg"
                 >
                   Sign up

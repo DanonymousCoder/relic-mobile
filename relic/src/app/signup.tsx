@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Checkbox } from "expo-checkbox";
+import { signup, RelicApiError } from "../services/api";
 
 export default function SignupScreen() {
   const [fullname, setFullname] = useState("");
@@ -23,8 +24,9 @@ export default function SignupScreen() {
   const [isAgreed, setIsAgreed] = useState(false);
 
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = async () => {
     setValidationError(null);
 
     if (!email || !password) {
@@ -43,6 +45,21 @@ export default function SignupScreen() {
       return setValidationError(
         "You must acknowledge the terms and conditions.",
       );
+    }
+
+    setLoading(true);
+
+    try {
+      await signup(email, password);
+      router.replace("/onboarding");
+    } catch (error) {
+      if (error instanceof RelicApiError) {
+        setValidationError(error.message);
+      } else {
+        setValidationError("Failed to connect to Backend.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,7 +165,7 @@ export default function SignupScreen() {
               </View>
 
               {/** Checkbox  */}
-              <TouchableOpacity className="flex-row gap-3 mb-5 mt-9">
+              <TouchableOpacity className="flex-row gap-3 mb-5 mt-2">
                 <Checkbox
                   value={isAgreed}
                   onValueChange={setIsAgreed}
@@ -160,9 +177,22 @@ export default function SignupScreen() {
                 </Text>
               </TouchableOpacity>
 
+              {/** Error message */}
+              {validationError ? (
+                <Text className="text-red-500 w-full text-center mt-4 font-medium">
+                  {validationError}
+                </Text>
+              ) : null}
+
               {/** Signup button */}
-              <TouchableOpacity className="bg-[#c69c6d] py-4 rounded-xl items-center mb-6">
-                <Text className="text-white text-lg font-semibold">Signup</Text>
+              <TouchableOpacity
+                className={`${loading ? "bg-[#c69c6d]/70" : "bg-[#c69c6d]"} w-full  mt-6 py-4 rounded-xl items-center mb-6`}
+                onPress={handleCreateAccount}
+                disabled={loading}
+              >
+                <Text className="text-white text-lg font-semibold">
+                  {loading ? "Creating Archive..." : "Signup"}
+                </Text>
               </TouchableOpacity>
 
               {/** Footer text */}
