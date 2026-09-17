@@ -5,12 +5,15 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { getShoots } from "../../services/api";
+import { getShoots, createShoot, uploadFiles } from "../../services/api";
 import { useEffect, useState } from "react";
+import { Modal, TextInput } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 
 // Dummy data for now
 const ARCHIVES = [
@@ -74,21 +77,107 @@ export default function DashboardScreen() {
   const [shoots, setShoots] = useState<Shoot[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [isModalVisible, setModalVisible] = useState(false);
+  const [newShootName, setNewShootName] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  const loadShoots = async () => {
+    setLoading(true);
+
+    try {
+      const data = (await getShoots()) as Shoot[];
+      setShoots(data || []);
+    } catch (error) {
+      console.error("Failed to fetch shoots: ", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadShoots = async () => {
-      try {
-        const data = (await getShoots()) as Shoot[];
-        setShoots(data || []);
-      } catch (error) {
-        console.error("Failed to fetch shoots: ", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-  });
+    loadShoots();
+  }, []);
+
+  const handleUpload = async () => {
+    if (!newShootName.trim()) {
+      Alert.alert("Name required", "Please enter a name for this archive.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: true,
+      quality: 1,
+    });
+
+    if (result.canceled) return;
+
+    setUploading(true);
+
+    try {
+      const shoot = (await createShoot(newShootName)) as any;
+
+      const formData = new FormData();
+      result.assets.forEach((asset, index) => {
+        formData.append("files", {
+          uri: asset.uri,
+          name: asset.fileName || `image_${index}.jpg`,
+          type: asset.mimeType || `image/jpeg`,
+        } as any);
+      });
+
+      await uploadFiles(shoot.id, formData);
+
+      setModalVisible(false);
+      setNewShootName("");
+      loadShoots();
+    } catch (error) {
+      console.error("Upload failed", error);
+      Alert.alert("Error", "Failed to upload archive.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <SafeAreaView className="bg-[#111111] flex-1" edges={["top"]}>
+      <Modal visible={isModalVisible} transparent animationType="fade">
+        <View className="flex-1 bg-black/80 justify-center items-center px-6">
+          <View className="bg-[#1A1A1A] w-full p-6 border border-gray-700 rounded-xl">
+            <Text className="text-white text-2xl font-serif mb-4">
+              New Archive
+            </Text>
+            <TextInput
+              value={newShootName}
+              onChangeText={setNewShootName}
+              placeholder="e.g... Portrait AUG 26"
+              placeholderTextColor="#666666"
+              className="border border-gray-400 text-white p-4 mb-6 rounded bg-[#111]"
+            />
+
+            <View className="flex-row justify-end gap-4">
+              <TouchableOpacity
+                className="p-3"
+                disabled={uploading}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text className="text-gray-200 font-bold">Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleUpload}
+                disabled={uploading}
+                className={`${uploading ? "bg-[#c69c6d]/50" : "bg-[#c69c6d]"} px-6 py-3 rounded`}
+              >
+                <Text className="text-white font-bold">
+                  {uploading ? "Uploading..." : "Select Photos"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/** Top Header */}
       <View className="flex-row items-center justify-between px-6 py-4">
         <Text className="text-white font-bold text-4xl font-serif tracking-wide">
@@ -170,6 +259,7 @@ export default function DashboardScreen() {
 
         <View className="flex-1 items-center z-50">
           <TouchableOpacity
+            onPress={() => setModalVisible(true)}
             className="w-14 h-14 bg-[#1A1A1A] border border-gray-700 items-center justify-center shadow-lg absolute -top-20"
             activeOpacity={0.7}
           >

@@ -69,3 +69,23 @@ export const getShootDetails = (shootId: string) => {
 export const getTimeline = (shootId: string) => {
     return fetchClient(`/api/shoots/${shootId}/timeline`)
 }
+
+export const createShoot = (name: string) => {
+    return fetchClient(`/api/shoots/`, {
+        method: "POST",
+        body: JSON.stringify({ name })
+    })
+}
+
+export const uploadFiles = (shootId: string, formData: FormData) => {
+    return fetchClient(`/api/shoots/${shootId}/files`, {
+        method: "POST",
+        body: formData
+    })
+}
+
+export const triggerArchive = (shootId: string) => {
+    return fetchClient(`/api/shoots/${shootId}/archive`, {
+        method: "POST"
+    })
+}
