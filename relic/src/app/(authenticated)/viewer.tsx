@@ -2,8 +2,98 @@ import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useState, useEffect } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { getShootDetails, getTimeline } from "../../services/api";
+
+interface FileDetail {
+  FileID: string;
+  Filename: string;
+  OriginalSize: number;
+  StoredSize: number;
+  Codec: string;
+  Hash: string;
+  Archived: boolean;
+}
+
+interface ShootDetails {
+  id: string;
+  name: string;
+  files: FileDetail[];
+  original_bytes: number;
+  stored_bytes: number;
+  compression_pct: number;
+}
+
+interface TimelineItem {
+  ID: string;
+  Filename: string;
+  TakenAt: string;
+  CameraMake: string;
+  CameraModel: string;
+  Lens: string;
+  Aperture: string;
+  Shutter: string;
+  ISO: number;
+}
 
 export default function ImageViewerScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+
+  const [loading, setLoading] = useState(true);
+  const [shoot, setShoot] = useState<ShootDetails | null>(null);
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+
+  const formatBytes = (bytes?: number) => {
+    if (!bytes) return "0 MB";
+
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+  };
+
+  const formatDate = (isoString?: string) => {
+    if (!isoString) return "Unknown date";
+    const date = new Date(isoString);
+
+    return date.toLocaleDateString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  };
+
+  useEffect(() => {
+    if (!id) return;
+
+    const loadData = async () => {
+      try {
+        const [detailsRes, timelineRes] = await Promise.all([
+          getShootDetails(id),
+          getTimeline(id),
+        ]);
+        setShoot(detailsRes as ShootDetails);
+        setTimeline((timelineRes as TimelineItem[]) || []);
+      } catch (err) {
+        console.error("Failed to load Viewer data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id]);
+
+  const activeFile = shoot?.files?.[0];
+  const activeMeta =
+    timeline?.find((t) => t.Filename === activeFile?.Filename) || timeline?.[0];
+
+  const savedBytes =
+    (activeFile?.OriginalSize || 0) - (activeFile?.StoredSize || 0);
+  const savedPct = activeFile?.OriginalSize
+    ? Math.round((savedBytes / activeFile.OriginalSize) * 100)
+    : shoot?.compression_pct || 0;
+
   return (
     <SafeAreaView className="flex-1 bg-[#0A0A0A]" edges={["top"]}>
       {/** navigation section */}
@@ -36,10 +126,10 @@ export default function ImageViewerScreen() {
         <View className="flex-row justify-between items-center p-4 border-b border-gray-800">
           <View>
             <Text className="text-gray-300 font-serif text-sm">
-              IMG_2023_YOSEMITE_PEAK.DNG
+              {activeFile?.Filename || "No File"}
             </Text>
             <Text className="text-gray-500 text-xs mt-1">
-              Captured: 2023-10-14 06:42 AM
+              Captured: {formatDate(activeMeta?.TakenAt)}
             </Text>
           </View>
 
@@ -70,7 +160,7 @@ export default function ImageViewerScreen() {
           </Text>
           <View className="border-t border-gray-800 py-3 mb-4">
             <Text className="text-gray-300 text-sm font-serif">
-              IMG_2023_YOSEMITE_PEAK.DNG
+              {activeFile?.Filename || "No File"}
             </Text>
           </View>
 
@@ -82,19 +172,20 @@ export default function ImageViewerScreen() {
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Camera</Text>
               <Text className="text-gray-300 text-xs font-serif">
-                Leica M11 Monochrom
+                {activeMeta?.CameraMake} {activeMeta?.CameraModel}
               </Text>
             </View>
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Lens</Text>
               <Text className="text-gray-300 text-xs font-serif">
-                Summicron-M 35mm f/2 ASPH.
+                {activeMeta?.Lens || "Unavailable"}
               </Text>
             </View>
             <View className="flex-row justify-between py-3 mb-4">
               <Text className="text-gray-400 text-xs">Settings</Text>
               <Text className="text-gray-300 text-xs">
-                ISO 125, f/8, 1/250s
+                ISO {activeMeta?.ISO}, {activeMeta?.Aperture},{" "}
+                {activeMeta?.Shutter}
               </Text>
             </View>
           </View>
@@ -106,16 +197,20 @@ export default function ImageViewerScreen() {
           <View className="border-t border-gray-800">
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Original size</Text>
-              <Text className="text-gray-300 text-xs font-serif">42.0MB</Text>
+              <Text className="text-gray-300 text-xs font-serif">
+                {formatBytes(activeFile?.OriginalSize)}
+              </Text>
             </View>
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Archived size</Text>
-              <Text className="text-gray-300 text-xs font-serif">33.0MB</Text>
+              <Text className="text-gray-300 text-xs font-serif">
+                {formatBytes(activeFile?.StoredSize)}
+              </Text>
             </View>
             <View className="flex-row justify-between py-3 mb-4">
               <Text className="text-gray-400 text-xs">Storage saved</Text>
               <Text className="text-gray-300 text-xs font-serif">
-                9.0MB (21%)
+                {formatBytes(savedBytes)} ({savedPct}%)
               </Text>
             </View>
           </View>
@@ -126,7 +221,7 @@ export default function ImageViewerScreen() {
           </Text>
           <View className="border-t border-gray-800 py-3 mb-10">
             <Text className="text-gray-400 text[10px] font-mono leading-4">
-              e3b0c44298fc1c149afbfc8996fb92427ae41e4649b934ca495991b7852b855
+              {activeFile?.Hash || "Pending"}
             </Text>
           </View>
         </ScrollView>

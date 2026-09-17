@@ -65,3 +65,7 @@ export const getShoots = () => {
 export const getShootDetails = (shootId: string) => {
     return fetchClient(`/api/shoots/${shootId}`)
 }
+
+export const getTimeline = (shootId: string) => {
+    return fetchClient(`/api/shoots/${shootId}/timeline`)
+}
