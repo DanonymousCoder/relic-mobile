@@ -1,7 +1,16 @@
-import { View, Text, Image, ScrollView, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { getShoots } from "../../services/api";
+import { useEffect, useState } from "react";
 
 // Dummy data for now
 const ARCHIVES = [
@@ -37,7 +46,47 @@ const ARCHIVES = [
   },
 ];
 
+interface Shoot {
+  id: string;
+  name: string;
+  file_count: number;
+  total_size: number;
+  archived_at?: string;
+}
+
+const formatBytes = (bytes: number) => {
+  if (!bytes) return "0 MB";
+
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+};
+
+const formatDate = (isoString?: string) => {
+  if (!isoString) return "Processing";
+  const date = new Date(isoString);
+
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+};
+
 export default function DashboardScreen() {
+  const [shoots, setShoots] = useState<Shoot[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadShoots = async () => {
+      try {
+        const data = (await getShoots()) as Shoot[];
+        setShoots(data || []);
+      } catch (error) {
+        console.error("Failed to fetch shoots: ", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+  });
+
   return (
     <SafeAreaView className="bg-[#111111] flex-1" edges={["top"]}>
       {/** Top Header */}
@@ -62,44 +111,52 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerClassName="px-4 pb-32"
       >
-        {ARCHIVES.map((archive) => {
-          return (
-            <TouchableOpacity
-              key={archive.id}
-              onPress={() => router.push("/(authenticated)/viewer")}
-              className="border border-gray-600 p-4 mb-6"
-              activeOpacity={0.8}
-            >
-              {/** Card Header */}
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-gray-100 text-[18px] tracking-widest font-mono uppercase">
-                  {archive.date}
-                </Text>
-                <Text className="text-[#c69c6d] text-[18px] tracking-widest font-mono uppercase">
-                  Archived
-                </Text>
-              </View>
-              {/** Main Image */}
-              <Image
-                source={{ uri: archive.imageUrl }}
-                className="w-full aspect-[4/3] bg-neutral-900"
-                resizeMode="cover"
-              />
-              {/** Card Footer */}
-              <View className="mt-4">
-                <Text className="text-white text-3xl font-serif mb-2">
-                  {archive.title}
-                </Text>
-                <Text className="text-gray-100 text-[18px] tracking-widest uppercase mb-1 font-mono">
-                  {archive.photos} Photos, {archive.videos} Videos
-                </Text>
-                <Text className="text-[#c69c6d] text-[18px] tracking-widest uppercase font-mono">
-                  Saved {archive.saved}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+        {loading ? (
+          <ActivityIndicator size="large" className="mt-20" color="#c69c6d" />
+        ) : (
+          shoots.map((shoot) => {
+            return (
+              <TouchableOpacity
+                key={shoot.id}
+                onPress={() =>
+                  router.push(`/(authenticated)/viewer?id=${shoot.id}`)
+                }
+                className="border border-gray-600 p-4 mb-6"
+                activeOpacity={0.8}
+              >
+                {/** Card Header */}
+                <View className="flex-row justify-between items-center mb-4">
+                  <Text className="text-gray-100 text-[18px] tracking-widest font-mono uppercase">
+                    {formatDate(shoot.archived_at)}
+                  </Text>
+                  <Text className="text-[#c69c6d] text-[18px] tracking-widest font-mono uppercase">
+                    {shoot.archived_at ? "Archived" : "Pending"}
+                  </Text>
+                </View>
+                {/** Main Image */}
+                <Image
+                  source={{
+                    uri: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop",
+                  }}
+                  className="w-full aspect-[4/3] bg-neutral-900"
+                  resizeMode="cover"
+                />
+                {/** Card Footer */}
+                <View className="mt-4">
+                  <Text className="text-white text-3xl font-serif mb-2">
+                    {shoot.name}
+                  </Text>
+                  <Text className="text-gray-100 text-[18px] tracking-widest uppercase mb-1 font-mono">
+                    {shoot.file_count} Files
+                  </Text>
+                  <Text className="text-[#c69c6d] text-[18px] tracking-widest uppercase font-mono">
+                    Total Size {formatBytes(shoot.total_size)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
 
       {/** Bottom Navigation Bar */}
