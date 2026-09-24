@@ -27,24 +27,26 @@ go run main.go
 ```
 
 ### 1. Start the React Native App(this repo)
-The backend uses a local SQLite database and handles the heavy lifting for file archiving and EXIF extraction.
 
 
 ```bash
-# Navigate to the backend directory
+# Navigate to the react-native frontend directory
 cd relic
 
 # Install dependencies
 npm install
 
-# Start the simulator
+# Start the simulator/emulator
 npx expo start -c
 ```
 
 
 ### Demo Video
 
-https://github.com/user-attachments/assets/129c175c-8a61-4bed-b337-3d8016785fe5
+
+https://github.com/user-attachments/assets/814fd12b-cc1f-4a9f-b397-3a89424e4303
+
+
 
 
 
