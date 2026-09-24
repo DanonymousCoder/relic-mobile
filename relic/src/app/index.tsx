@@ -78,7 +78,7 @@ export default function LoginScreen() {
                 Email or Phone no.
               </Text>
               <TextInput
-                className="w-full text-[#ddd] border-b-[#ddd] border-b-2 py-3 "
+                className="w-full text-[#000000] border-b-[#ddd] border-b-2 py-3 "
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -95,7 +95,7 @@ export default function LoginScreen() {
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   placeholder="***********"
-                  className="w-full text-[#ddd] border-b-[#ddd] border-b-2 py-3 font-semibold"
+                  className="w-full text-[#000000] border-b-[#ddd] border-b-2 py-3 font-semibold"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}

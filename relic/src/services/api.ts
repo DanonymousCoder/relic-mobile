@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://192.168.1.161:8080'
+const API_BASE_URL = 'http://localhost:8000'
 
 export class RelicApiError extends Error {
     code: string
@@ -71,7 +71,7 @@ export const getTimeline = (shootId: string) => {
 }
 
 export const createShoot = (name: string) => {
-    return fetchClient(`/api/shoots/`, {
+    return fetchClient(`/api/shoots`, {
         method: "POST",
         body: JSON.stringify({ name })
     })

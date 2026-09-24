@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -60,7 +61,8 @@ interface Shoot {
   name: string;
   file_count: number;
   total_size: number;
-  archived_at?: string;
+  stored_size?: number;
+  archived_at?: { Time: string; Valid: boolean } | null;
 }
 
 const formatBytes = (bytes: number) => {
@@ -86,6 +88,13 @@ export default function DashboardScreen() {
   const [isModalVisible, setModalVisible] = useState(false);
   const [newShootName, setNewShootName] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadShoots();
+    setRefreshing(false);
+  };
 
   const loadShoots = async () => {
     setLoading(true);
@@ -124,13 +133,14 @@ export default function DashboardScreen() {
       const shoot = (await createShoot(newShootName)) as any;
 
       const formData = new FormData();
-      result.assets.forEach((asset, index) => {
-        formData.append("files", {
-          uri: asset.uri,
-          name: asset.fileName || `image_${index}.jpg`,
-          type: asset.mimeType || `image/jpeg`,
-        } as any);
-      });
+      for (let i = 0; i < result.assets.length; i++) {
+        const asset = result.assets[i];
+
+        const localUriFetch = await fetch(asset.uri);
+        const blob = await localUriFetch.blob();
+
+        formData.append("files", blob, asset.fileName || `image_${i}.jpg`);
+      }
 
       await uploadFiles(shoot.id, formData);
 
@@ -207,7 +217,7 @@ export default function DashboardScreen() {
             <Feather name="filter" color="white" size={20} />
           </TouchableOpacity>
           <TouchableOpacity>
-            {/** Settings Icon */}{" "}
+            {/** Settings Icon */}
             <Feather name="settings" color="white" size={20} />
           </TouchableOpacity>
         </View>
@@ -217,11 +227,28 @@ export default function DashboardScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerClassName="px-4 pb-32"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#c69c6d"
+          />
+        }
       >
         {loading ? (
           <ActivityIndicator size="large" className="mt-20" color="#c69c6d" />
         ) : (
           shoots.map((shoot) => {
+            const isArchived = shoot.archived_at?.Valid;
+            const savedBytes =
+              isArchived && shoot.total_size
+                ? shoot.total_size - (shoot.stored_size || 0)
+                : 0;
+            const savedPct =
+              isArchived && shoot.total_size
+                ? Math.round((savedBytes / shoot.total_size) * 100)
+                : 0;
+
             return (
               <TouchableOpacity
                 key={shoot.id}
@@ -234,10 +261,12 @@ export default function DashboardScreen() {
                 {/** Card Header */}
                 <View className="flex-row justify-between items-center mb-4">
                   <Text className="text-gray-100 text-[18px] tracking-widest font-mono uppercase">
-                    {formatDate(shoot.archived_at)}
+                    {shoot.archived_at?.Valid
+                      ? formatDate(shoot.archived_at.Time)
+                      : "Processing"}
                   </Text>
                   <Text className="text-[#c69c6d] text-[18px] tracking-widest font-mono uppercase">
-                    {shoot.archived_at ? "Archived" : "Pending"}
+                    {shoot.archived_at?.Valid ? "Archived" : "Pending"}
                   </Text>
                 </View>
                 {/** Main Image */}
@@ -257,7 +286,8 @@ export default function DashboardScreen() {
                     {shoot.file_count} Files
                   </Text>
                   <Text className="text-[#c69c6d] text-[18px] tracking-widest uppercase font-mono">
-                    Total Size {formatBytes(shoot.total_size)}
+                    Total {formatBytes(shoot.total_size)}{" "}
+                    {isArchived && savedPct > 0 ? `• Saved ${savedPct}%` : ""}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -269,7 +299,7 @@ export default function DashboardScreen() {
       {/** Bottom Navigation Bar */}
       <View className="w-full bg-[#111111] border-t border-gray-800 flex-row justify-between items-center px-6 pb-6 pt-4 h-24 absolute bottom-0 z-50">
         <TouchableOpacity className="flex-1 items-center">
-          <View className="bg[#c69c6d] h-[2px] w-12 absolute -top-4" />
+          <View className="bg-[#c69c6d] h-[2px] w-12 absolute -top-4" />
           <Text className="text-[#c69c6d] text-[18px] font-mono tracking-widest uppercase mt-2">
             Archive
           </Text>

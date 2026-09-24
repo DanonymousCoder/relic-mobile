@@ -28,13 +28,13 @@ interface ShootDetails {
 interface TimelineItem {
   ID: string;
   Filename: string;
-  TakenAt: string;
+  TakenAt: { Time: string; Valid: boolean } | null;
   CameraMake: string;
   CameraModel: string;
   Lens: string;
   Aperture: string;
   Shutter: string;
-  ISO: number;
+  ISO: { Int64: number; Valid: boolean } | null;
 }
 
 export default function ImageViewerScreen() {
@@ -129,7 +129,10 @@ export default function ImageViewerScreen() {
               {activeFile?.Filename || "No File"}
             </Text>
             <Text className="text-gray-500 text-xs mt-1">
-              Captured: {formatDate(activeMeta?.TakenAt)}
+              Captured:{" "}
+              {activeMeta?.TakenAt?.Valid
+                ? formatDate(activeMeta.TakenAt.Time)
+                : "Unknown date"}
             </Text>
           </View>
 
@@ -148,7 +151,7 @@ export default function ImageViewerScreen() {
 
         <ScrollView className="px-4 pt-4" showsVerticalScrollIndicator={false}>
           <View className="flex-row justify-between items-center mb-6">
-            <Text className="text-white text-lg font-serif">Metadata</Text>
+            <Text className="text-white text-xl font-serif">Metadata</Text>
             <TouchableOpacity>
               <Feather name="x" size={20} color="white" />
             </TouchableOpacity>
@@ -159,7 +162,7 @@ export default function ImageViewerScreen() {
             Identifier
           </Text>
           <View className="border-t border-gray-800 py-3 mb-4">
-            <Text className="text-gray-300 text-sm font-serif">
+            <Text className="text-gray-300 text-md font-serif">
               {activeFile?.Filename || "No File"}
             </Text>
           </View>
@@ -171,21 +174,21 @@ export default function ImageViewerScreen() {
           <View className="border-t border-gray-800">
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Camera</Text>
-              <Text className="text-gray-300 text-xs font-serif">
+              <Text className="text-gray-300 text-md font-serif">
                 {activeMeta?.CameraMake} {activeMeta?.CameraModel}
               </Text>
             </View>
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Lens</Text>
-              <Text className="text-gray-300 text-xs font-serif">
+              <Text className="text-gray-300 text-md font-serif">
                 {activeMeta?.Lens || "Unavailable"}
               </Text>
             </View>
             <View className="flex-row justify-between py-3 mb-4">
               <Text className="text-gray-400 text-xs">Settings</Text>
-              <Text className="text-gray-300 text-xs">
-                ISO {activeMeta?.ISO}, {activeMeta?.Aperture},{" "}
-                {activeMeta?.Shutter}
+              <Text className="text-gray-300 text-md">
+                ISO {activeMeta?.ISO?.Valid ? activeMeta.ISO.Int64 : "N/A"},{" "}
+                {activeMeta?.Aperture}, {activeMeta?.Shutter}
               </Text>
             </View>
           </View>
@@ -197,19 +200,19 @@ export default function ImageViewerScreen() {
           <View className="border-t border-gray-800">
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Original size</Text>
-              <Text className="text-gray-300 text-xs font-serif">
+              <Text className="text-gray-300 text-md font-serif">
                 {formatBytes(activeFile?.OriginalSize)}
               </Text>
             </View>
             <View className="flex-row justify-between py-3 border-b border-gray-800/50">
               <Text className="text-gray-400 text-xs">Archived size</Text>
-              <Text className="text-gray-300 text-xs font-serif">
+              <Text className="text-gray-300 text-md font-serif">
                 {formatBytes(activeFile?.StoredSize)}
               </Text>
             </View>
             <View className="flex-row justify-between py-3 mb-4">
               <Text className="text-gray-400 text-xs">Storage saved</Text>
-              <Text className="text-gray-300 text-xs font-serif">
+              <Text className="text-gray-300 text-md font-serif">
                 {formatBytes(savedBytes)} ({savedPct}%)
               </Text>
             </View>
@@ -220,7 +223,7 @@ export default function ImageViewerScreen() {
             Integrity (SHA-256)
           </Text>
           <View className="border-t border-gray-800 py-3 mb-10">
-            <Text className="text-gray-400 text[10px] font-mono leading-4">
+            <Text className="text-gray-400 text-md font-mono leading-4">
               {activeFile?.Hash || "Pending"}
             </Text>
           </View>
